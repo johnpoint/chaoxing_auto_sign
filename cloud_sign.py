@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 requests.packages.urllib3.disable_warnings()
 
+
 class AutoSign(object):
 
     def __init__(self, username, password, schoolid=None):
@@ -56,15 +57,16 @@ class AutoSign(object):
             self.session.cookies = cookies_jar
 
             # 检测cookies是否有效
-            r = self.session.get('http://i.mooc.chaoxing.com/app/myapps.shtml', allow_redirects=False)
+            r = self.session.get(
+                'http://mooc1-1.chaoxing.com/api/workTestPendingNew', allow_redirects=False)
             if r.status_code != 200:
-                print("cookies已失效，重新获取中")
+                print("COOKIES CHECK FAIL | RETRY")
                 return False
             else:
-                if len(self.get_all_classid())==0:
-                    print("课程计数为0!")
+                if len(self.get_all_classid()) == 0:
+                    print("COOKIES CHECK FAIL | RETRY")
                     return False
-                print("cookies有效哦")
+                print("COOKIES CHECK PASS")
                 return True
 
     def login(self, password, schoolid, username):
@@ -74,18 +76,19 @@ class AutoSign(object):
                 'http://passport2.chaoxing.com/api/login?name={}&pwd={}&schoolid={}&verify=0'.format(username, password,
                                                                                                      schoolid))
             if json.loads(r.text)['result']:
-                print("登录成功")
+                print("LOGIN SUCCESS")
             else:
-                print("登录失败，请检查账号密码是否正确")
+                print("LOGIN FAIL | CHECK ACCOUNT INFO")
 
         else:
             r = self.session.get(
-                'https://passport2.chaoxing.com/api/login?name={}&pwd={}&schoolid=&verify=0'.format(username, password),
+                'https://passport2.chaoxing.com/api/login?name={}&pwd={}&schoolid=&verify=0'.format(
+                    username, password),
                 headers=self.headers)
             if json.loads(r.text)['result']:
-                print("登录成功")
+                print("LOGIN SUCCESS")
             else:
-                print("登录失败，请检查账号密码是否正确")
+                print("LOGIN FAIL | CHECK ACCOUNT INFO")
 
     def check_activeid(self, activeid):
         """检测activeid是否存在，不存在则添加"""
@@ -109,15 +112,18 @@ class AutoSign(object):
 
     def get_all_classid(self) -> list:
         """获取课程主页中所有课程的classid和courseid"""
+        print("GET CLASS INFO")
         res = []
-        r = self.session.get('http://mooc1-2.chaoxing.com/visit/interaction', headers=self.headers)
+        r = self.session.get(
+            'http://mooc1-2.chaoxing.com/visit/interaction', headers=self.headers)
         soup = BeautifulSoup(r.text, "lxml")
         courseId_list = soup.find_all('input', attrs={'name': 'courseId'})
         classId_list = soup.find_all('input', attrs={'name': 'classId'})
         classname_list = soup.find_all('h3', class_="clearfix")
         for i, v in enumerate(courseId_list):
-            res.append((v['value'], classId_list[i]['value'], classname_list[i].find_next('a')['title']))
-        print(res)
+            res.append((v['value'], classId_list[i]['value'],
+                        classname_list[i].find_next('a')['title']))
+        # print(res)
         return res
 
     def get_token(self):
@@ -127,7 +133,6 @@ class AutoSign(object):
         token_dict = json.loads(res.text)
         return (token_dict['_token'])
 
-    
     def upload_img(self):
         """上传图片"""
         # 从图片文件夹内随机选择一张图片
@@ -191,6 +196,7 @@ class AutoSign(object):
 
     def general_sign(self, classid, courseid, activeid):
         """普通签到"""
+        print("CHECK IN")
         r = self.session.get(
             'https://mobilelearn.chaoxing.com/widget/sign/pcStuSignController/preSign?activeId={}&classId={}&fid=39037&courseId={}'.format(
                 activeid, classid, courseid), headers=self.headers, verify=False)
@@ -208,6 +214,7 @@ class AutoSign(object):
 
     def hand_sign(self, classid, courseid, activeid):
         """手势签到"""
+        print("HAND SIGN")
         hand_sign_url = "https://mobilelearn.chaoxing.com/widget/sign/pcStuSignController/signIn?&courseId={}&classId={}&activeId={}".format(
             courseid, classid, activeid)
         r = self.session.get(hand_sign_url, headers=self.headers, verify=False)
@@ -221,6 +228,7 @@ class AutoSign(object):
 
     def qcode_sign(self, activeId):
         """二维码签到"""
+        print("QCODE SIGN")
         params = {
             'name': '',
             'activeId': activeId,
@@ -232,7 +240,8 @@ class AutoSign(object):
             'fid': '',
             'appType': '15'
         }
-        res = self.session.get('https://mobilelearn.chaoxing.com/pptSign/stuSignajax', params=params)
+        res = self.session.get(
+            'https://mobilelearn.chaoxing.com/pptSign/stuSignajax', params=params)
         s = {
             'date': time.strftime("%m-%d %H:%M", time.localtime()),
             'status': res.text
@@ -241,6 +250,7 @@ class AutoSign(object):
 
     def addr_sign(self, activeId):
         """位置签到"""
+        print("LOCATION SIGN")
         params = {
             'name': '',
             'activeId': activeId,
@@ -253,7 +263,8 @@ class AutoSign(object):
             'appType': '15',
             'ifTiJiao': '1'
         }
-        res = self.session.get('https://mobilelearn.chaoxing.com/pptSign/stuSignajax', params=params)
+        res = self.session.get(
+            'https://mobilelearn.chaoxing.com/pptSign/stuSignajax', params=params)
         s = {
             'date': time.strftime("%m-%d %H:%M", time.localtime()),
             'status': res.text
@@ -262,6 +273,7 @@ class AutoSign(object):
 
     def tphoto_sign(self, activeId):
         """拍照签到"""
+        print("PHOTO SIGN")
         objectId = self.upload_img()
         params = {
             'name': '',
@@ -276,7 +288,8 @@ class AutoSign(object):
             'ifTiJiao': '1',
             'objectId': objectId
         }
-        res = self.session.get('https://mobilelearn.chaoxing.com/pptSign/stuSignajax', params=params)
+        res = self.session.get(
+            'https://mobilelearn.chaoxing.com/pptSign/stuSignajax', params=params)
         s = {
             'date': time.strftime("%m-%d %H:%M", time.localtime()),
             'status': res.text
@@ -322,7 +335,8 @@ class AutoSign(object):
         for r in result:
             if r:
                 for d in r['class'].values():
-                    s = self.sign_in(d['classid'], d['courseid'], d['activeid'], d['sign_type'])
+                    s = self.sign_in(d['classid'], d['courseid'],
+                                     d['activeid'], d['sign_type'])
                     if s:
                         # 签到课程， 签到时间， 签到状态
                         sign_msg = {
@@ -336,9 +350,11 @@ class AutoSign(object):
 
 def server_chan_send(msg):
     """server酱将消息推送至微信"""
+    print("PUSH TO WECHAT")
     desp = ''
     for d in msg:
-        desp = '|  **课程名**  |   '+str(d['name'])+'   |\r| :----------: | :---------- |\r'
+        desp = '|  **课程名**  |   ' + \
+            str(d['name'])+'   |\r| :----------: | :---------- |\r'
         desp += '| **签到时间** |   '+str(d['date'])+'   |\r'
         desp += '| **签到状态** |   '+str(d['status'])+'   |\r'
 
@@ -352,7 +368,7 @@ def server_chan_send(msg):
 
 def telegram_push_send(msg):
     """Telegrambot 推送"""
-    print(":: telegram")
+    print("PUSH TO TELEGRAM")
     desp = ''
     for d in msg:
         desp = "课程:{}%0A".format(d['name'])
@@ -364,6 +380,7 @@ def telegram_push_send(msg):
 
 def local_run():
     # 本地运行使用
+    print("START CHECK")
     s = AutoSign(user_info['username'], user_info['password'])
     result = s.sign_tasks_run()
 #    result=[{"name":"test","date":"test","status":"test"}]
@@ -374,7 +391,7 @@ def local_run():
             telegram_push_send(result)
         return result
     else:
-        return "暂无签到任务"
+        return "NO TASK NOW"
 
 
 if __name__ == '__main__':
